@@ -20,6 +20,7 @@ class User(AbstractUser):
     role = models.CharField(max_length=20,choices=ROLES)
     status = models.CharField(max_length=20, choices=STATUS,default="active")
     is_deleted = models.BooleanField(default=False)
+    needs_password_change = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
     USERNAME_FIELD = 'email'
