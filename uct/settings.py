@@ -32,6 +32,7 @@ INSTALLED_APPS = [
     'djoser',
     'users',
     'api',
+    'student',
 ]
 
 MIDDLEWARE = [
