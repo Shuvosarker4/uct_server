@@ -1,10 +1,97 @@
 from djoser.serializers import UserCreateSerializer as BaseUserCreateSerializer, UserSerializer as BaseUserSerializer
+from rest_framework import serializers
+from student.models import Student
+from .models import Admin
+from django.contrib.auth import get_user_model
+from django.db import transaction
 
+
+User = get_user_model()
 
 class UserCreateSerializer(BaseUserCreateSerializer):
     class Meta(BaseUserCreateSerializer.Meta):
         fields = ['id','email','password','first_name','last_name','role']
 
+
+class CreateStudentSerializer(serializers.ModelSerializer):
+    user = UserCreateSerializer()
+    class Meta:
+        model= Student
+        fields = [
+            'id',
+            'student_id',
+            'user', 
+            'academic_department',
+            'admission_semester', 
+            'gender',
+            'date_of_birth',
+            'contact_no',
+            'emergency_contact_no',
+            'present_address',
+            'permanent_address',
+            'guardian_number',
+            'profile_image',
+            'is_deleted',
+            'created_at',
+            'updated_at',
+        ]
+    read_only_fields = ['student_id', 'created_at', 'updated_at']
+    
+    def create(self, validated_data):
+        with transaction.atomic():
+            user_data = validated_data.pop('user')
+            user = User.objects.create_user(**user_data)
+            user.save()
+            student = Student.objects.create(user=user, **validated_data)
+            return student
+
+
+
+class AdminSerializer(serializers.ModelSerializer):
+    user = UserCreateSerializer()
+    user_name = serializers.CharField(source='user.get_full_name', read_only=True)
+    management_department_name = serializers.StringRelatedField(
+        source='management_department', 
+        read_only=True
+    )
+    
+    class Meta:
+        model = Admin
+        fields = [
+            'id', 
+            'user',  
+            'user_name', 
+            'designation',
+            'gender',
+            'date_of_birth',
+            'contact_no',
+            'emergency_contact_no',
+            'present_address',
+            'permanent_address',
+            'profile_image',
+            'management_department',
+            'management_department_name',
+            'is_deleted',
+            'created_at',
+            'updated_at',
+        ]
+        
+        read_only_fields = [
+            'id', 
+            'user_name', 
+            'management_department_name',
+            'created_at', 
+            'updated_at'
+        ]
+
+    def create(self, validated_data):
+        with transaction.atomic():
+            user_data = validated_data.pop('user')
+            user = User.objects.create_user(**user_data)
+            user.is_staff = True
+            user.save()
+            admin = Admin.objects.create(user=user, **validated_data)
+            return admin
 
 class UserSerializer(BaseUserSerializer):
     class Meta(BaseUserSerializer.Meta):

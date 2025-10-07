@@ -88,7 +88,6 @@ class Student(models.Model):
         ("female", "Female"),
     )
     
-    # Custom student ID (e.g., 2024-CSE-001)
     student_id = models.CharField(max_length=20, unique=True, editable=False, blank=True)
     user = models.OneToOneField(
         settings.AUTH_USER_MODEL,
