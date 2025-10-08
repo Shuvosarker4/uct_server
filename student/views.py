@@ -13,6 +13,9 @@ class SemesterViewSet(ModelViewSet):
 
 class StudentViewSet(ModelViewSet):
     http_method_names = ['get', 'head', 'options']
-    queryset = Student.objects.all()
-    serializer_class =StudentSerializer
+    queryset = Student.objects.filter(
+        user__role='student',  # Access role through user relationship
+        is_deleted=False       # Only show non-deleted students
+    )
+    serializer_class = StudentSerializer
     

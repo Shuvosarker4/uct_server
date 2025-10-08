@@ -2,7 +2,9 @@ from django.db import models
 from django.contrib.auth.models import AbstractUser
 from users.managers import CustomUserManager
 from django.conf import settings
-from student.models import AcademicDepartment
+from student.models import AcademicDepartment,Student
+from django.core.exceptions import ValidationError
+from django.db import transaction
 # Create your models here.
 
 class User(AbstractUser):
@@ -29,8 +31,43 @@ class User(AbstractUser):
     objects = CustomUserManager()
 
     def save(self, *args, **kwargs):
-        # Todo
-        super().save(*args, **kwargs)
+        with transaction.atomic():
+            if self.pk:
+                try:
+                    old_user = User.objects.get(pk=self.pk)
+                    if old_user.role == 'admin' and self.role != 'admin':
+                        has_student_profile = Student.objects.filter(user_id=self.pk).exists()
+                        if has_student_profile:
+                            self.is_staff = False
+                        else:
+                            raise ValidationError(
+                                "Admin cannot be changed to student/faculty unless a student profile exists."
+                            )
+
+                    elif old_user.role != 'admin' and self.role == 'admin':
+                        self.is_staff = True
+                        if not Admin.objects.filter(user_id=self.pk).exists():
+                            Admin.objects.create(
+                                user=self,
+                                designation='Administrator',
+                                gender='male',
+                                contact_no='',
+                                emergency_contact_no='',
+                                present_address='',
+                                permanent_address='',
+                                management_department_id=1,
+                            )
+
+                    else:
+                        self.is_staff = (self.role == 'admin')
+
+                except User.DoesNotExist:
+                    self.is_staff = (self.role == 'admin')
+            else:
+                self.is_staff = (self.role == 'admin')
+
+            super().save(*args, **kwargs)
+
 
     def __str__(self):
         return f"{self.email} - {self.status}"
