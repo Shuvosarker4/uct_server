@@ -9,9 +9,13 @@ from django.db import transaction
 User = get_user_model()
 
 class UserCreateSerializer(BaseUserCreateSerializer):
+    password = serializers.CharField(write_only=True, required=False,style={'input_type': 'password'})
     class Meta(BaseUserCreateSerializer.Meta):
-        fields = ['id','email','password','first_name','last_name','role']
-
+        fields = ['id','email','password','first_name','last_name']
+    def validate(self, attrs):
+        password = attrs.get('password') or 'testUser'
+        attrs['password'] = password
+        return attrs
 
 class CreateStudentSerializer(serializers.ModelSerializer):
     user = UserCreateSerializer()
@@ -39,7 +43,9 @@ class CreateStudentSerializer(serializers.ModelSerializer):
     
     def create(self, validated_data):
         with transaction.atomic():
+            print(validated_data)
             user_data = validated_data.pop('user')
+            user_data['role'] = 'student'
             user = User.objects.create_user(**user_data)
             user.save()
             student = Student.objects.create(user=user, **validated_data)
