@@ -11,7 +11,10 @@ User = get_user_model()
 class UserCreateSerializer(BaseUserCreateSerializer):
     password = serializers.CharField(write_only=True, required=False,style={'input_type': 'password'})
     class Meta(BaseUserCreateSerializer.Meta):
-        fields = ['id','email','password','first_name','last_name']
+        fields = ['id','email','password','first_name','last_name','role']
+
+        read_only_fields = ['role', 'created_at', 'updated_at']
+
     def validate(self, attrs):
         password = attrs.get('password') or 'testUser'
         attrs['password'] = password
@@ -35,7 +38,6 @@ class CreateStudentSerializer(serializers.ModelSerializer):
             'permanent_address',
             'guardian_number',
             'profile_image',
-            'is_deleted',
             'created_at',
             'updated_at',
         ]
@@ -93,6 +95,7 @@ class AdminSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         with transaction.atomic():
             user_data = validated_data.pop('user')
+            user_data['role'] = 'admin'
             user = User.objects.create_user(**user_data)
             user.is_staff = True
             user.save()

@@ -158,3 +158,79 @@ class Student(models.Model):
             self.student_id = f'{year}-{dept_code}-{new_sequence:03d}'
         
         super().save(*args, **kwargs)
+
+class Faculty(models.Model):
+    GENDER_CHOICES = (
+        ("male", "Male"),
+        ("female", "Female"),
+    )
+    
+    DESIGNATION_CHOICES = (
+        ("Professor", "Professor"),
+        ("Associate Professor", "Associate Professor"),
+        ("Assistant Professor", "Assistant Professor"),
+        ("Lecturer", "Lecturer"),
+        ("Senior Lecturer", "Senior Lecturer"),
+    )
+    faculty_id = models.CharField(max_length=20, unique=True, editable=False, blank=True)
+    user = models.OneToOneField(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='faculty_profile'
+    )
+    designation = models.CharField(max_length=50, choices=DESIGNATION_CHOICES)
+    academic_faculty = models.ForeignKey(
+        AcademicFaculty,
+        on_delete=models.PROTECT,
+        related_name='faculty_members'
+    )
+    
+    academic_department = models.ForeignKey(
+        AcademicDepartment,
+        on_delete=models.PROTECT,
+        related_name='faculty_members'
+    )
+    gender = models.CharField(max_length=10, choices=GENDER_CHOICES)
+    date_of_birth = models.DateField()
+    contact_no = models.CharField(max_length=20)
+    emergency_contact_no = models.CharField(max_length=20)
+    present_address = models.TextField()
+    permanent_address = models.TextField()
+    profile_image = models.ImageField(
+        upload_to='faculty/profiles/',
+        blank=True,
+        null=True
+    )
+    
+    is_deleted = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['academic_department', 'faculty_id']),
+            models.Index(fields=['academic_faculty']),
+            models.Index(fields=['is_deleted']),
+        ]
+    
+    def __str__(self):
+        return f"{self.faculty_id} - {self.user.get_full_name()}"
+    
+    
+    def save(self, *args, **kwargs):
+        if not self.faculty_id:
+            year = timezone.now().year
+            prefix = f'{year}-FAC-'
+            last_faculty = Faculty.objects.filter(
+                faculty_id__startswith=prefix
+            ).order_by('-faculty_id').first()
+            
+            if last_faculty and last_faculty.faculty_id:
+                last_sequence = int(last_faculty.faculty_id.split('-')[-1])
+                new_sequence = last_sequence + 1
+            else:
+                new_sequence = 1
+            self.faculty_id = f'{year}-FAC-{new_sequence:03d}'
+        
+        super().save(*args, **kwargs)

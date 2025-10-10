@@ -1,8 +1,8 @@
 from rest_framework import serializers
-from .models import Student,AcademicDepartment,AcademicFaculty,AcademicSemester
+from .models import Faculty, Student,AcademicDepartment,AcademicFaculty,AcademicSemester
 from users.serializers import UserCreateSerializer
 from django.contrib.auth import get_user_model
-
+from django.db import transaction
 
 User = get_user_model()
 
@@ -94,3 +94,45 @@ class StudentSerializer(serializers.ModelSerializer):
         ]
     read_only_fields = ['student_id', 'created_at', 'updated_at']
     
+
+class FacultySerializer(serializers.ModelSerializer):
+    email = serializers.EmailField(source='user.email', read_only=True)
+    academic_faculty_name = serializers.CharField(source='academic_faculty.name', read_only=True)
+    academic_department_name = serializers.CharField(source='academic_department.name', read_only=True)
+    academic_department_code = serializers.CharField(source='academic_department.code', read_only=True)
+    user = UserCreateSerializer()
+
+    class Meta:
+        model = Faculty
+        fields = [
+            'id',
+            'faculty_id',
+            'user',
+            'email',
+            'designation',
+            'academic_faculty',
+            'academic_faculty_name',
+            'academic_department',
+            'academic_department_name',
+            'academic_department_code',
+            'gender',
+            'date_of_birth',
+            'contact_no',
+            'emergency_contact_no',
+            'present_address',
+            'permanent_address',
+            'profile_image',
+            'created_at',
+            'updated_at',
+        ]
+        read_only_fields = ['faculty_id', 'email', 'created_at', 'updated_at']
+   
+    def create(self, validated_data):
+        with transaction.atomic():
+            user_data = validated_data.pop('user')
+            user_data['role'] = 'faculty'
+            user = User.objects.create_user(**user_data)
+            user.is_staff = True
+            user.save()
+            admin = Faculty.objects.create(user=user, **validated_data)
+            return admin
